@@ -1,6 +1,7 @@
 # -- encoding: UTF-8 --
 import re
 import sys, json, time
+import argparse
 
 
 def read_messages(filenames):
@@ -16,7 +17,7 @@ def read_messages(filenames):
 
 
 def format_messages(messages, user_map):
-    user_name_map = dict((id, u["name"]) for (id, u) in user_map.items())
+    user_name_map = dict((id, u["name"] if isinstance(u, dict) else str(u)) for (id, u) in user_map.items())
 
     for mtup in sorted(messages):
         ts = time.strftime("%Y-%m-%d %H:%M.%S", time.gmtime(mtup[0]))
@@ -36,7 +37,21 @@ def expand_message(message, user_name_map):
     return message
 
 
-if __name__ == "__main__":
-    messages, user_map = read_messages(sys.argv[1:])
+def cmdline():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--usermap-file")
+    ap.add_argument("file", nargs="*")
+    args = ap.parse_args()
+    messages, user_map = read_messages(args.file)
+    if args.usermap_file:
+        with open(args.usermap_file, "r") as infp:
+            data = json.load(infp)
+            if "userMap" in data:
+                data = data["userMap"]
+            user_map.update(dict(data))
     for message in format_messages(messages, user_map):
         print(message)
+
+
+if __name__ == "__main__":
+    cmdline()
